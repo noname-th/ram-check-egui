@@ -1,5 +1,5 @@
-use ::windows::Win32::System::SystemInformation::GetPhysicallyInstalledSystemMemory;
 use std::process::Command;
+use windows::Win32::System::SystemInformation::GetPhysicallyInstalledSystemMemory;
 use windows::Win32::System::SystemInformation::{GlobalMemoryStatusEx, MEMORYSTATUSEX};
 
 #[derive(Debug, Clone)]
@@ -82,9 +82,10 @@ impl MemoryInfo {
             let _ = Command::new("cmd")
                 .args(&[
                     "/C",
-                    "shutdown /r /t 0 /c \"RAM issue detected, restarting...\"",
+                    "shutdown /r /t 0 ",
                 ])
-                .spawn();
+                .spawn()
+                .expect("Failed to restart the computer");
         }
     }
 }
