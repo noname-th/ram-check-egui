@@ -12,19 +12,24 @@ pub struct App {
     countdown_timer: Option<Instant>,
     countdown_duration: Duration,
     error_message: Option<String>,
+
+    first_render: bool,
 }
 
 impl App {
     pub fn new(cc: &eframe::CreationContext) -> Self {
-        // load thai font
-        // load and activate default font
+        // โหลดฟอนต์ภาษาไทย
         let mut fonts = egui::FontDefinitions::default();
+
+        // activate NotoSansThaiLooped
         fonts.font_data.insert(
             "NotoSanseThaiLooped".to_owned(),
             Arc::new(egui::FontData::from_static(include_bytes!(
                 "../assets/font/NotoSansThaiLooped-VariableFont_wdth,wght.ttf"
             ))),
         );
+
+        // กำหนดฟอนต์เป็นฟอนต์หลักสำหรับ Proportional
         fonts
             .families
             .entry(egui::FontFamily::Proportional)
@@ -38,6 +43,8 @@ impl App {
             countdown_timer: None,
             countdown_duration: Duration::from_secs(10),
             error_message: None,
+
+            first_render: true,
         };
 
         if let Err(e) = app.memory_info.update() {
@@ -46,6 +53,7 @@ impl App {
 
         // เริ่มนับถอยหลังถ้ามีปัญหา
         if app.memory_info.has_problem() {
+            // เริ่มนับถอยหลังจากเวลาปัจจุบัน
             app.countdown_timer = Some(Instant::now());
         }
 
@@ -53,6 +61,7 @@ impl App {
     }
 
     fn update_memory_info(&mut self) {
+        // อัปเดตข้อมูล RAM ทุก ๆ 1 วินาที
         if self.last_update.elapsed() >= Duration::from_secs(1) {
             if let Err(e) = self.memory_info.update() {
                 self.error_message = Some(e);
@@ -94,18 +103,17 @@ impl App {
     }
 
     fn execute_fix_action(&mut self) {
-        // Abstract function - สามารถกำหนดการทำงานได้ที่นี่
-        println!("Executing fix action...");
-        // TODO: ใส่ฟังก์ชันที่ต้องการให้ทำงานเมื่อนับถอยหลังเสร็จ
         self.memory_info.fix_ram_issue();
     }
 }
 
 impl eframe::App for App {
+    // ตั้งค่าพื้นหลังเป็นโปร่งใส
     fn clear_color(&self, _visuals: &egui::Visuals) -> [f32; 4] {
         Color32::TRANSPARENT.to_normalized_gamma_f32()
     }
 
+    // ฟังก์ชันหลักสำหรับอัปเดต UI
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         self.update_memory_info();
 
@@ -117,23 +125,26 @@ impl eframe::App for App {
             }
         }
 
+        // รีเพนต์หน้าต่างทุก 100 มิลลิวินาที
         ctx.request_repaint_after(Duration::from_millis(100));
 
+        // สร้างหน้าต่างหลัก
         egui::Window::new("main_window")
             .title_bar(false)
             .collapsible(false)
             .movable(true)
-            .auto_sized()
             .anchor(Align2::CENTER_TOP, Vec2::ZERO)
             .max_width(WIN_WIDTH)
+            .auto_sized()
+            .resizable(false)
             .frame(
                 egui::Frame::default()
                     .corner_radius(10.0)
-                    .fill(Color32::TRANSPARENT),
+                    .fill(ctx.style().visuals.window_fill()),
             )
             .show(ctx, |ui| {
                 ui.vertical_centered(|ui| {
-                    // MainFrame (Card)
+                    // กรอบหน้าต่างหลัก
                     egui::Frame::new()
                         .fill(ui.style().visuals.window_fill())
                         .stroke(ui.style().visuals.window_stroke())
@@ -157,7 +168,7 @@ impl eframe::App for App {
                                 ui.style_mut().interaction.selectable_labels = false;
                                 ui.heading("🖥  RAM Status Monitor");
 
-                                // create draggable area
+                                // ทำให้ TitleBar สามารถลากย้ายหน้าต่างได้
                                 let response = ui.interact(
                                     title_rect,
                                     Id::new("main_window_drag"),
@@ -279,6 +290,19 @@ impl eframe::App for App {
                                     }
                                 });
                             });
+
+                            let full_size = ctx.used_size();
+
+                            // กำหนดขนาดหน้าต่างให้พอดีกับเนื้อหาเมื่อรันครั้งแรก
+                            if self.first_render {
+                                if full_size.y >= ui.min_size().y && full_size.x >= ui.min_size().x
+                                {
+                                    ctx.send_viewport_cmd(ViewportCommand::InnerSize(
+                                        ui.clip_rect().size(),
+                                    ));
+                                    self.first_render = false;
+                                }
+                            }
                         });
                 });
 

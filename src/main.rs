@@ -7,7 +7,7 @@ fn main() -> eframe::Result<(), eframe::Error> {
     let native_options = eframe::NativeOptions {
         centered: true,
         viewport: egui::ViewportBuilder {
-            //inner_size: Some(egui::vec2(app::WIN_WIDTH, app::WIN_HEIGHT)),
+            inner_size: Some(egui::vec2(app::WIN_WIDTH, 240.0)),
             decorations: Some(false),
             minimize_button: Some(false),
             maximize_button: Some(false),
