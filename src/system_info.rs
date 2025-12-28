@@ -4,19 +4,20 @@ use windows::Win32::System::SystemInformation::{GlobalMemoryStatusEx, MEMORYSTAT
 
 #[derive(Debug, Clone)]
 pub struct MemoryInfo {
-    pub total_physical: u64, // RAM ที่ติดตั้งจริง
-    pub total_visible: u64,  // RAM ที่แสดงทั้งหมด (จาก Windows API)
+    pub total_physical_kb: u64, // RAM ที่ติดตั้งจริง
+    pub total_visible_kb: u64,  // RAM ที่แสดงทั้งหมด (จาก Windows API)
 }
 
 impl MemoryInfo {
     pub fn new() -> Self {
         Self {
-            total_physical: 0,
-            total_visible: 0,
+            total_physical_kb: 0,
+            total_visible_kb: 0,
         }
     }
 
     pub fn update(&mut self) -> Result<(), String> {
+        // ดึงข้อมูล RAM จาก Windows API
         unsafe {
             let mut mem_status = MEMORYSTATUSEX {
                 dwLength: std::mem::size_of::<MEMORYSTATUSEX>() as u32,
@@ -25,12 +26,14 @@ impl MemoryInfo {
 
             match GlobalMemoryStatusEx(&mut mem_status) {
                 Ok(_) => {
-                    self.total_visible = mem_status.ullTotalPhys;
+                    // รับค่าข้อมูล RAM ที่แสดงเป็น KB
+                    self.total_visible_kb = mem_status.ullTotalPhys / 1024;
 
-                    let mut totlal_physical_kb: u64 = 0;
-                    if (GetPhysicallyInstalledSystemMemory(&mut totlal_physical_kb)).is_ok() {
-                        self.total_physical = totlal_physical_kb * 1024; // แปลงจาก KB เป็น Bytes
-                    }
+                    // รับค่าข้อมูล RAM ที่ติดตั้งจริง
+                    GetPhysicallyInstalledSystemMemory(&mut self.total_physical_kb).map_err(
+                        |e| format!("Failed to get physically installed memory: {:?}", e),
+                    )?;
+
                     Ok(())
                 }
                 Err(e) => Err(format!("Failed to get memory info: {:?}", e)),
@@ -42,48 +45,33 @@ impl MemoryInfo {
     /// ถ้ามากกว่าครึ่ง = ปกติ (false)
     /// ถ้าน้อยกว่าครึ่ง = มีปัญหา (true)
     pub fn has_problem(&self) -> bool {
-        if self.total_physical == 0 {
+        if self.total_physical_kb == 0 {
             return false;
         }
-        let half = self.total_physical / 2;
-        self.total_visible < half
-    }
-
-    /// คำนวณอัตราส่วนของ RAM ที่แสดงต่อ RAM ที่ติดตั้ง (เป็นเปอร์เซ็นต์)
-    pub fn visible_ratio(&self) -> f32 {
-        if self.total_physical == 0 {
-            return 0.0;
-        }
-        (self.total_visible as f64 / self.total_physical as f64 * 100.0) as f32
+        let half = self.total_physical_kb / 2;
+        self.total_visible_kb < half
     }
 
     /// แปลง total_physical เป็น GB
     pub fn total_installed_gb(&self) -> f64 {
-        self.total_physical as f64 / 1_073_741_824.0
+        self.total_physical_kb as f64 / 1_048_576.0
     }
 
     /// แปลง total_visible เป็น GB
     pub fn total_visible_gb(&self) -> f64 {
-        self.total_visible as f64 / 1_073_741_824.0
+        self.total_visible_kb as f64 / 1_048_576.0
     }
 
-    /// Abstract function: ฟังก์ชันสำหรับแก้ไขปัญหา RAM
-    /// สามารถ implement ตามต้องการ
+    /// ฟังก์ชันสำหรับแก้ไขปัญหา RAM
     pub fn fix_ram_issue(&self) {
-        // TODO: ใส่โค้ดที่ต้องการให้ทำงานเมื่อพบปัญหา RAM
-        // เช่น รีสตาร์ท, ล้าง cache, ฯลฯ
-        println!("Fixing RAM issue...");
-        println!("Total Physical: {:.2} GB", self.total_installed_gb());
-        println!("Total Visible: {:.2} GB", self.total_visible_gb());
-        println!("Ratio: {:.1}%", self.visible_ratio());
+        // println!("Fixing RAM issue...");
+        // println!("Total Physical: {:.2} GB", self.total_installed_gb());
+        // println!("Total Visible: {:.2} GB", self.total_visible_gb());
         // Restart the computer
         #[cfg(target_os = "windows")]
         {
             let _ = Command::new("cmd")
-                .args(&[
-                    "/C",
-                    "shutdown /r /t 0 ",
-                ])
+                .args(&["/C", "shutdown /r /t 0 "])
                 .spawn()
                 .expect("Failed to restart the computer");
         }
