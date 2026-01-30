@@ -1,15 +1,19 @@
 [package]
 name = "ram-check-egui"
-version = "1.0.0"
+version = "1.0.1"
 edition = "2024"
+authors = ["noname-th"]
 
 [dependencies]
-eframe = "0.32.3"
-egui = "0.32.3"
+eframe = "*"
+egui = "0.33.3"
 
 [dependencies.windows]
-version = "0.62.1"
-features = ["Win32_System_SystemInformation"]
+version = "0.58.0"
+features = ["Win32_System_SystemInformation",
+    "Win32_System_Diagnostics_Debug",
+    "Win32_UI_WindowsAndMessaging"
+]
 
 [build-dependencies]
 winres = "0.1.12"

@@ -1,6 +1,8 @@
 use ::egui::{Align2, Color32, CornerRadius, Id, Vec2, ViewportCommand};
+use ::windows::Win32::System::Diagnostics::Debug::MessageBeep;
+use ::windows::Win32::UI::WindowsAndMessaging::{MB_ICONINFORMATION, MB_ICONWARNING};
 
-use crate::system_info::MemoryInfo;
+use crate::system_info::{MemoryInfo};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
@@ -57,6 +59,16 @@ impl App {
             app.countdown_timer = Some(Instant::now());
         }
 
+        // ฟังก์ชันสำหรับเล่นเสียงแจ้งเตือน
+        unsafe {
+                if app.memory_info.has_problem() {
+                    let _ = MessageBeep(MB_ICONWARNING);
+                } else {
+                    let _ = MessageBeep(MB_ICONINFORMATION);
+                }
+        }
+        
+        // คืนค่าแอป
         app
     }
 
@@ -302,6 +314,7 @@ impl eframe::App for App {
                             let full_size = ctx.used_size();
 
                             if self.first_render {
+
                                 // กำหนดขนาดหน้าต่างให้พอดีกับเนื้อหาเมื่อรันครั้งแรก
                                 if full_size.y >= ui.min_size().y && full_size.x >= ui.min_size().x
                                 {
