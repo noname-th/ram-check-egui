@@ -256,45 +256,53 @@ impl eframe::App for App {
 
                                     if self.countdown_timer.is_some() {
                                         // Button1 - ยกเลิก
-                                        if ui
-                                            .add_sized([50.0, 40.0], egui::Button::new("❌ ยกเลิก"))
-                                            .clicked()
-                                        {
+                                        let cancel_button_response = ui
+                                            .add_sized([50.0, 40.0], egui::Button::new("❌ ยกเลิก"));
+                                        if cancel_button_response.clicked() {
                                             ctx.send_viewport_cmd(ViewportCommand::Close);
                                         }
 
                                         ui.add_space(10.0);
 
                                         // Button2 - ดำเนินการทันที
-                                        if ui
-                                            .add_sized(
-                                                [50.0, 40.0],
-                                                egui::Button::new("⏩ รีสตาร์ททันที"),
-                                            )
-                                            .clicked()
-                                        {
+                                        let continue_button_response = ui.add_sized(
+                                            [50.0, 40.0],
+                                            egui::Button::new("⏩ รีสตาร์ททันที"),
+                                        );
+                                        if continue_button_response.clicked() {
                                             self.execute_fix_action();
                                             ctx.send_viewport_cmd(ViewportCommand::Close);
                                         }
+
+                                        // โฟกัสปุ่มอัตโนมัติ
+                                        ui.memory_mut(|mem| {
+                                            if mem.focused().is_none() {
+                                                mem.request_focus(cancel_button_response.id);
+                                            }
+                                        });
                                     } else {
                                         // Button - ปิดหน้าต่าง
-                                        if ui
-                                            .add_sized(
-                                                [60.0, 40.0],
-                                                egui::Button::new("✅ ปิดหน้าต่าง"),
-                                            )
-                                            .clicked()
-                                        {
+                                        let close_button_response = ui.add_sized(
+                                            [60.0, 40.0],
+                                            egui::Button::new("✅ ปิดหน้าต่าง"),
+                                        );
+                                        if close_button_response.clicked() {
                                             ctx.send_viewport_cmd(ViewportCommand::Close);
                                         }
+                                        // โฟกัสปุ่มอัตโนมัติ
+                                        ui.memory_mut(|mem| {
+                                            if mem.focused().is_none() {
+                                                mem.request_focus(close_button_response.id);
+                                            }
+                                        });
                                     }
                                 });
                             });
 
                             let full_size = ctx.used_size();
 
-                            // กำหนดขนาดหน้าต่างให้พอดีกับเนื้อหาเมื่อรันครั้งแรก
                             if self.first_render {
+                                // กำหนดขนาดหน้าต่างให้พอดีกับเนื้อหาเมื่อรันครั้งแรก
                                 if full_size.y >= ui.min_size().y && full_size.x >= ui.min_size().x
                                 {
                                     ctx.send_viewport_cmd(ViewportCommand::InnerSize(
@@ -302,6 +310,12 @@ impl eframe::App for App {
                                     ));
                                     self.first_render = false;
                                 }
+
+                                // โฟกัสหน้าต่างเมื่อรันครั้งแรก
+                                ctx.send_viewport_cmd(ViewportCommand::Focus);
+                                ctx.send_viewport_cmd(ViewportCommand::RequestUserAttention(
+                                    ::egui::UserAttentionType::Critical,
+                                ));
                             }
                         });
                 });
